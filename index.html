@@ -17,6 +17,8 @@
     .mark{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#fff;color:#0754b8;font-weight:900}
     h1{font-size:clamp(29px,6vw,48px);line-height:1.08;letter-spacing:-.045em;margin:45px 0 11px;max-width:660px}
     .hero p{font-size:16px;line-height:1.5;margin:0;max-width:580px;color:#e8f3ff}
+    .group-link{display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 17px;border-radius:12px;background:#25d366;color:#083924;text-decoration:none;font-weight:800;font-size:14px;box-shadow:0 5px 18px #042e3530}
+    .group-link:hover,.group-link:focus-visible{background:#46e480}
     main{padding:0 20px 45px}
     .panel{position:relative;margin-top:-30px;background:#fff;border-radius:22px;box-shadow:0 12px 38px #092b6b19;padding:22px}
     .bar{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:17px}
@@ -25,6 +27,7 @@
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px}
     .card{border:1px solid #e2eaf5;border-radius:17px;padding:17px;display:flex;flex-direction:column;gap:12px;background:#fff;min-height:190px}
     .card:hover{border-color:#84b7ef;box-shadow:0 7px 20px #0d4e9812}
+    .photo{width:100%;aspect-ratio:4/3;object-fit:contain;background:#f5f8fc;border-radius:11px}
     .badge{align-self:start;background:#e8f2ff;color:#0754b8;font-size:11px;font-weight:800;padding:5px 9px;border-radius:999px;letter-spacing:.04em;text-transform:uppercase}
     .title{font-size:16px;line-height:1.3;font-weight:750;margin:0;overflow-wrap:anywhere}
     .bottom{display:flex;justify-content:space-between;align-items:end;gap:10px;margin-top:auto}
@@ -41,9 +44,10 @@
     <div class="brand"><span class="mark">%</span><span>PromoZap</span></div>
     <h1>Viu no Story? A oferta está aqui.</h1>
     <p>Encontre o produto e toque em “Ver oferta” para abrir o link de compra.</p>
+    <a class="group-link" href="https://chat.whatsapp.com/H1znpFl7Oi24a53mhS1jV0" target="_blank" rel="noopener noreferrer">Entrar no grupo de WhatsApp ↗</a>
   </div></header>
   <main class="wrap"><section class="panel" aria-labelledby="offers-title">
-    <div class="bar"><div><h2 id="offers-title">Ofertas recentes</h2><p class="small" id="count">Carregando ofertas…</p></div></div>
+    <div class="bar"><div><h2 id="offers-title">Ofertas de hoje e ontem</h2><p class="small" id="count">Carregando ofertas…</p></div></div>
     <div id="offers" class="grid" aria-live="polite"></div>
   </section></main>
   <footer class="wrap">Preços, cupons e disponibilidade podem mudar na loja. Confira as condições antes de comprar.</footer>
@@ -51,9 +55,22 @@
     const container = document.querySelector('#offers');
     const counter = document.querySelector('#count');
     const allowed = /^https:\/\//i;
+    const localDay = date => {
+      const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+      const read = type => parts.find(part => part.type === type)?.value;
+      return `${read('year')}-${read('month')}-${read('day')}`;
+    };
+    const now = new Date();
+    const visibleDays = new Set([localDay(now),localDay(new Date(now.getTime()-86400000))]);
+    const isRecent = offer => {const date = new Date(offer?.createdAt);return Number.isFinite(date.getTime()) && visibleDays.has(localDay(date))};
     function card(offer){
       if(!offer || typeof offer.title !== 'string' || typeof offer.url !== 'string' || !allowed.test(offer.url)) return null;
       const article = document.createElement('article'); article.className = 'card';
+      if(typeof offer.image === 'string' && /^\.\/images\/[a-zA-Z0-9_-]+\.jpe?g$/.test(offer.image)){
+        const photo = document.createElement('img'); photo.className = 'photo'; photo.src = offer.image; photo.alt = `Foto de ${offer.title}`; photo.loading = 'lazy'; photo.decoding = 'async'; photo.addEventListener('error', () => photo.remove()); article.append(photo);
+      } else if(typeof offer.image === 'string' && /^\.\/ofertas\/[a-zA-Z0-9_./-]+\.(png|jpe?g|webp)$/.test(offer.image)){
+        const photo = document.createElement('img'); photo.className = 'photo'; photo.src = offer.image; photo.alt = `Foto de ${offer.title}`; photo.loading = 'lazy'; photo.decoding = 'async'; photo.addEventListener('error', () => photo.remove()); article.append(photo);
+      }
       const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = 'Oferta';
       const title = document.createElement('h3'); title.className = 'title'; title.textContent = offer.title;
       const bottom = document.createElement('div'); bottom.className = 'bottom';
@@ -64,11 +81,11 @@
     fetch('./offers.json', {cache:'no-store'})
       .then(response => {if(!response.ok) throw new Error('Falha ao carregar'); return response.json()})
       .then(data => {
-        const offers = Array.isArray(data) ? data : [];
+        const offers = Array.isArray(data) ? data.filter(isRecent).sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)) : [];
         const cards = offers.map(card).filter(Boolean);
         counter.textContent = cards.length ? `${cards.length} ofertas disponíveis` : 'Novas ofertas em breve';
         if(cards.length) container.replaceChildren(...cards);
-        else {const p=document.createElement('p');p.className='empty';p.textContent='As próximas ofertas aparecerão aqui.';container.replaceChildren(p)}
+        else {const p=document.createElement('p');p.className='empty';p.textContent='Ainda não há ofertas de hoje ou ontem. Volte mais tarde ou entre no grupo de WhatsApp.';container.replaceChildren(p)}
       })
       .catch(() => {counter.textContent='Não foi possível carregar as ofertas agora';});
   </script>
