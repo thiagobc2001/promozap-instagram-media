@@ -47,6 +47,10 @@
     .card{border:1px solid #e2eaf5;border-radius:17px;padding:17px;display:flex;flex-direction:column;gap:12px;background:#fff;min-height:190px}
     .card:hover{border-color:#84b7ef;box-shadow:0 7px 20px #0d4e9812}
     .photo{width:100%;aspect-ratio:1;object-fit:contain;background:#f5f8fc;border-radius:11px}
+    .composite{position:relative;width:100%;aspect-ratio:1;background:#f5f8fc;border-radius:11px;overflow:hidden}
+    .composite-square{position:absolute;height:100%;aspect-ratio:1;left:50%;transform:translateX(-50%)}
+    .composite-square .photo-base{display:block;width:100%;height:100%;object-fit:contain}
+    .composite-square .brand-cover{position:absolute;display:block;height:auto;z-index:1}
     .badge{align-self:start;background:#e8f2ff;color:#0754b8;font-size:11px;font-weight:800;padding:5px 9px;border-radius:999px;letter-spacing:.04em;text-transform:uppercase}
     .title{font-size:16px;line-height:1.3;font-weight:750;margin:0;overflow-wrap:anywhere}
     .bottom{display:flex;justify-content:space-between;align-items:end;gap:10px;margin-top:auto}
@@ -61,7 +65,7 @@
     .empty{grid-column:1/-1;padding:26px 8px;color:#64748b;line-height:1.5}
     footer{padding:0 20px 30px;color:#64748b;font-size:12px;line-height:1.5;text-align:center}
     @media(max-width:850px){.hero{grid-template-columns:1fr 250px;padding:30px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:650px){.wrap{width:min(100% - 24px,500px)}.topbar-inner{min-height:52px}.wordmark{font-size:18px}.topnav{gap:13px;font-size:12px}.hero-bg{padding:12px 0 42px}.hero{grid-template-columns:1fr;gap:18px;padding:22px 20px 26px;min-height:0;border-radius:19px}.hero-copy{order:2}.logo-frame{order:1;width:154px;border-radius:22px;transform:rotate(2deg)}h1{font-size:clamp(31px,9vw,42px);margin:14px 0 11px}.lead{font-size:14px}.actions{margin-top:19px}.cta{flex:1;min-width:140px}.panel{padding:15px;margin-top:-19px;border-radius:18px}.grid{grid-template-columns:1fr;gap:12px}.card{padding:12px}.photo{aspect-ratio:1.25;object-fit:contain}.bottom{align-items:center}.pagination{gap:9px}.pagination button{padding:10px}.page-info{font-size:12px}}
+    @media(max-width:650px){.wrap{width:min(100% - 24px,500px)}.topbar-inner{min-height:52px}.wordmark{font-size:18px}.topnav{gap:13px;font-size:12px}.hero-bg{padding:12px 0 42px}.hero{grid-template-columns:1fr;gap:18px;padding:22px 20px 26px;min-height:0;border-radius:19px}.hero-copy{order:2}.logo-frame{order:1;width:154px;border-radius:22px;transform:rotate(2deg)}h1{font-size:clamp(31px,9vw,42px);margin:14px 0 11px}.lead{font-size:14px}.actions{margin-top:19px}.cta{flex:1;min-width:140px}.panel{padding:15px;margin-top:-19px;border-radius:18px}.grid{grid-template-columns:1fr;gap:12px}.card{padding:12px}.photo,.composite{aspect-ratio:1.25}.photo{object-fit:contain}.bottom{align-items:center}.pagination{gap:9px}.pagination button{padding:10px}.page-info{font-size:12px}}
   </style>
 </head>
 <body>
@@ -98,6 +102,11 @@
     const pageInfo = document.querySelector('#page-info');
     let offers = [];
     let currentPage = 1;
+    const brandCorrections = {
+      './images/26Wg1qC.png': {source:'./images/26Wg1qC.jpg',left:18.5,top:49.5,width:40.5},
+      './images/2gcfy3X.png': {source:'./images/2gcfy3X.jpg',left:29.5,top:23.5,width:42},
+      './images/1uVZkjW.png': {source:'./images/1uVZkjW.jpg',left:16.5,top:75,width:41}
+    };
     const allowed = /^https:\/\//i;
     const localDay = date => {
       const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
@@ -112,7 +121,17 @@
       if(!offer || typeof offer.title !== 'string' || typeof offer.url !== 'string' || !allowed.test(offer.url)) return null;
       const article = document.createElement('article'); article.className = 'card';
       if(typeof offer.image === 'string' && /^\.\/(images|ofertas)\/[a-zA-Z0-9_./-]+\.(png|jpe?g|webp)$/.test(offer.image)){
-        const photo = document.createElement('img'); photo.className = 'photo'; photo.src = offer.image; photo.alt = `Arte da oferta: ${offer.title}`; photo.loading = 'lazy'; photo.decoding = 'async'; photo.addEventListener('error', () => photo.remove()); article.append(photo);
+        const correction = brandCorrections[offer.image];
+        if(correction){
+          const frame = document.createElement('div'); frame.className = 'composite'; frame.setAttribute('role','img'); frame.setAttribute('aria-label',`Arte PromoZap da oferta: ${offer.title}`); frame.style.visibility = 'hidden';
+          const square = document.createElement('div'); square.className = 'composite-square';
+          const photo = document.createElement('img'); photo.className = 'photo-base'; photo.alt = ''; photo.src = correction.source;
+          const brand = document.createElement('img'); brand.className = 'brand-cover'; brand.alt = ''; brand.src = './assets/tarja-promozap-azul-v4-hd.png'; brand.style.left = `${correction.left}%`; brand.style.top = `${correction.top}%`; brand.style.width = `${correction.width}%`;
+          square.append(photo,brand); frame.append(square); article.append(frame);
+          Promise.all([photo.decode(),brand.decode()]).then(() => frame.style.visibility = 'visible').catch(() => frame.remove());
+        } else {
+          const photo = document.createElement('img'); photo.className = 'photo'; photo.src = offer.image; photo.alt = `Arte da oferta: ${offer.title}`; photo.loading = 'lazy'; photo.decoding = 'async'; photo.addEventListener('error', () => photo.remove()); article.append(photo);
+        }
       }
       const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = 'Oferta';
       const title = document.createElement('h3'); title.className = 'title'; title.textContent = offer.title;
@@ -148,4 +167,3 @@
   </script>
 </body>
 </html>
-
