@@ -9,9 +9,11 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[1]
+ROOT = HERE.parent
 BACKGROUND = HERE / "background-promo-v1.jpg"
-LOGO = ROOT / "branding" / "promozap-logo-original-1024.jpg"
+if not BACKGROUND.is_file():
+    BACKGROUND = ROOT / "assets" / "instagram-background-promo-v1.jpg"
+LOGO = ROOT / "assets" / "promozap-logo.jpg"
 FONT_BOLD = next((str(path) for path in [Path("C:/Windows/Fonts/arialbd.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")] if path.is_file()), "DejaVuSans-Bold.ttf")
 FONT_REGULAR = next((str(path) for path in [Path("C:/Windows/Fonts/arial.ttf"), Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")] if path.is_file()), "DejaVuSans.ttf")
 BLUE = "#061943"
